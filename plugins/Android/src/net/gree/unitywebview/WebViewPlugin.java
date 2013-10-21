@@ -30,6 +30,7 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup.LayoutParams;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -45,6 +46,7 @@ class WebViewPluginInterface
 		mGameObject = gameObject;
 	}
 
+	@JavascriptInterface
 	public void call(String message)
 	{
 		UnityPlayer.UnitySendMessage(mGameObject, "CallFromJS", message);
@@ -91,7 +93,7 @@ public class WebViewPlugin
 			WebSettings webSettings = mWebView.getSettings();
 			webSettings.setSupportZoom(false);
 			webSettings.setJavaScriptEnabled(true);
-			webSettings.setPluginsEnabled(true);
+			webSettings.setPluginState(WebSettings.PluginState.ON);
 
 		}});
 
