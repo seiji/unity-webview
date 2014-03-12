@@ -36,6 +36,8 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.content.Intent;
+import android.net.Uri;
 
 class WebViewPluginInterface
 {
@@ -86,6 +88,20 @@ public class WebViewPlugin
 				Gravity.NO_GRAVITY));
 
 			mWebView.setWebChromeClient(new WebChromeClient());
+            mWebView.setWebViewClient(new WebViewClient() {
+                    @Override
+                    public boolean shouldOverrideUrlLoading(WebView webView, String url) {
+                        if (url.startsWith("mailto://")) {
+                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                            if(intent != null) {
+                                webView.getContext().startActivity(intent);
+                                webView.reload();
+                            }
+                            return true;
+                        }
+                        return false;
+                    }
+            });
 			mWebView.setWebViewClient(new WebViewClient());
 			mWebView.addJavascriptInterface(
 				new WebViewPluginInterface(gameObject), "Unity");
