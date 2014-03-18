@@ -37,6 +37,8 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.content.Intent;
+import android.content.ActivityNotFoundException;
+import android.net.MailTo;
 import android.net.Uri;
 
 class WebViewPluginInterface
@@ -90,19 +92,27 @@ public class WebViewPlugin
 			mWebView.setWebChromeClient(new WebChromeClient());
             mWebView.setWebViewClient(new WebViewClient() {
                     @Override
-                    public boolean shouldOverrideUrlLoading(WebView webView, String url) {
-                        if (url.startsWith("mailto:")) {
-                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                    public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                        if(url.startsWith("mailto:")){
+                            MailTo mt = MailTo.parse(url);
+                            Intent intent = new Intent(Intent.ACTION_SEND);
+                            intent.setType("text/plain");
+                            intent.putExtra(Intent.EXTRA_EMAIL, new String[]{mt.getTo()});
+                            intent.putExtra(Intent.EXTRA_SUBJECT, mt.getSubject());
+                            intent.putExtra(Intent.EXTRA_CC, mt.getCc());
+                            intent.putExtra(Intent.EXTRA_TEXT, mt.getBody());
                             if(intent != null) {
-                                webView.getContext().startActivity(intent);
-                                webView.reload();
+                                try{
+                                    view.getContext().startActivity(Intent.createChooser(intent, "Send mail..."));
+                                } catch(ActivityNotFoundException e){
+                                }
                             }
+                            view.reload();
                             return true;
                         }
                         return false;
                     }
             });
-			mWebView.setWebViewClient(new WebViewClient());
 			mWebView.addJavascriptInterface(
 				new WebViewPluginInterface(gameObject), "Unity");
 
