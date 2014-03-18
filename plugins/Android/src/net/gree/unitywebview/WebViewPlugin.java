@@ -91,7 +91,7 @@ public class WebViewPlugin
             mWebView.setWebViewClient(new WebViewClient() {
                     @Override
                     public boolean shouldOverrideUrlLoading(WebView webView, String url) {
-                        if (url.startsWith("mailto://")) {
+                        if (url.startsWith("mailto:")) {
                             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
                             if(intent != null) {
                                 webView.getContext().startActivity(intent);
