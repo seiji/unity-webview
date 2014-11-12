@@ -95,6 +95,7 @@ static void UnitySendMessage(
 	NSBitmapImageRep *bitmap;
 	int textureId;
 	BOOL needsDisplay;
+    NSString *alternatePathString;
 }
 @end
 
@@ -104,10 +105,13 @@ static void UnitySendMessage(
 {
 	self = [super init];
 	monoMethod = 0;
+    alternatePathString = nil;
 	webView = [[WebView alloc] initWithFrame:NSMakeRect(0, 0, width, height)];
 	webView.hidden = YES;
+    
 	[webView setAutoresizingMask:(NSViewWidthSizable|NSViewHeightSizable)];
 	[webView setPolicyDelegate:self];
+    [webView setFrameLoadDelegate:self];
 	gameObject = [[NSString stringWithUTF8String:gameObject_] retain];
 
 	return self;
@@ -118,6 +122,7 @@ static void UnitySendMessage(
 	[webView release];
 	[gameObject release];
 	[bitmap release];
+    [alternatePathString release];
 	[super dealloc];
 }
 
@@ -131,6 +136,24 @@ static void UnitySendMessage(
 	} else {
 		[listener use];
 	}
+}
+
+- (void)webView:(WebView *)sender didFailProvisionalLoadWithError:(NSError *)error forFrame:(WebFrame *)frame
+{
+    if ([sender mainFrame] == frame) {
+        NSURL* fileURL = [NSURL fileURLWithPath:alternatePathString];
+        NSURLRequest *request = [NSURLRequest requestWithURL:fileURL];
+        [frame loadRequest:request];
+    }
+}
+
+- (void)webView:(WebView *)sender didFailLoadWithError:(NSError *)error forFrame:(WebFrame *)frame
+{
+    if ([sender mainFrame] == frame) {
+        NSURL* fileURL = [NSURL fileURLWithPath:alternatePathString];
+        NSURLRequest *request = [NSURLRequest requestWithURL:fileURL];
+        [frame loadRequest:request];
+    }
 }
 
 - (void)setRect:(int)width height:(int)height
@@ -148,12 +171,29 @@ static void UnitySendMessage(
 	webView.hidden = visibility ? NO : YES;
 }
 
-- (void)loadURL:(const char *)url
+
+- (void)setTransparent:(BOOL)visibility
+{
+    [webView setDrawsBackground:!visibility];
+}
+
+- (void)loadURL:(const char *)url alternate:(const char *)alternatePath
 {
 	NSString *urlStr = [NSString stringWithUTF8String:url];
 	NSURL *nsurl = [NSURL URLWithString:urlStr];
+    
+    alternatePathString = [[NSString stringWithUTF8String:alternatePath] retain];
+    
 	NSURLRequest *request = [NSURLRequest requestWithURL:nsurl];
 	[[webView mainFrame] loadRequest:request];
+}
+
+- (void)loadHTML:(const char*)path
+{
+    NSString *pathStr = [NSString stringWithUTF8String:path];
+    NSURL* fileURL = [NSURL fileURLWithPath:pathStr];
+    NSURLRequest* request = [NSURLRequest requestWithURL:fileURL];
+    [[webView mainFrame] loadRequest:request];
 }
 
 - (void)evaluateJS:(const char *)js
@@ -266,7 +306,9 @@ void *_WebViewPlugin_Init(
 void _WebViewPlugin_Destroy(void *instance);
 void _WebViewPlugin_SetRect(void *instance, int width, int height);
 void _WebViewPlugin_SetVisibility(void *instance, BOOL visibility);
-void _WebViewPlugin_LoadURL(void *instance, const char *url);
+void _WebViewPlugin_SetTransparent(void *instance, BOOL visibility);
+void _WebViewPlugin_LoadURL(void *instance, const char *url, const char *alternatePathString);
+void _WebViewPlugin_LoadHTML(void *instance, const char *path);
 void _WebViewPlugin_EvaluateJS(void *instance, const char *url);
 void _WebViewPlugin_Update(void *instance, int x, int y, float deltaY,
 	BOOL buttonDown, BOOL buttonPress, BOOL buttonRelease,
@@ -308,10 +350,22 @@ void _WebViewPlugin_SetVisibility(void *instance, BOOL visibility)
 	[webViewPlugin setVisibility:visibility];
 }
 
-void _WebViewPlugin_LoadURL(void *instance, const char *url)
+void _WebViewPlugin_SetTransparent(void *instance, BOOL visibility)
+{
+    WebViewPlugin *webViewPlugin = (WebViewPlugin *)instance;
+    [webViewPlugin setTransparent:visibility];
+}
+
+void _WebViewPlugin_LoadURL(void *instance, const char *url, const char *alternatePathString)
 {
 	WebViewPlugin *webViewPlugin = (WebViewPlugin *)instance;
-	[webViewPlugin loadURL:url];
+    [webViewPlugin loadURL:url alternate:alternatePathString];
+}
+
+void _WebViewPlugin_LoadHTML(void *instance, const char *path)
+{
+    WebViewPlugin *webViewPlugin = (WebViewPlugin *)instance;
+    [webViewPlugin loadHTML:path];
 }
 
 void _WebViewPlugin_EvaluateJS(void *instance, const char *js)

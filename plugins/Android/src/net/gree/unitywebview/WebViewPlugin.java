@@ -1,15 +1,15 @@
 /*
  * Copyright (C) 2011 Keijiro Takahashi
  * Copyright (C) 2012 GREE, Inc.
- * 
+ *
  * This software is provided 'as-is', without any express or implied
  * warranty.  In no event will the authors be held liable for any damages
  * arising from the use of this software.
- * 
+ *
  * Permission is granted to anyone to use this software for any purpose,
  * including commercial applications, and to alter it and redistribute it
  * freely, subject to the following restrictions:
- * 
+ *
  * 1. The origin of this software must not be misrepresented; you must not
  *    claim that you wrote the original software. If you use this software
  *    in a product, an acknowledgment in the product documentation would be
@@ -62,7 +62,9 @@ public class WebViewPlugin
 	private static FrameLayout layout = null;
 	private WebView mWebView;
 	private long mDownTime;
-
+	private String mAlternatePathString = null;
+	
+	
 	public WebViewPlugin()
 	{
 	}
@@ -112,6 +114,12 @@ public class WebViewPlugin
                         }
                         return false;
                     }
+                    @Override
+                    public void onReceivedError(WebView webview, int errorCode, String description, String failingUrl) {
+                    	if (errorCode < 0 && mAlternatePathString != null) {
+                    		webview.loadUrl(mAlternatePathString);
+                    	}
+                    }
             });
 			mWebView.addJavascriptInterface(
 				new WebViewPluginInterface(gameObject), "Unity");
@@ -140,7 +148,7 @@ public class WebViewPlugin
 					UnityPlayer.UnitySendMessage(gameObject, "SetKeyboardVisible", "false");
 				}
 			}
-		}); 
+		});
 	}
 
 	public void Destroy()
@@ -156,13 +164,30 @@ public class WebViewPlugin
 		}});
 	}
 
-	public void LoadURL(final String url)
+	public void LoadURL(final String url, final String alternatePathString)
+	{
+		mAlternatePathString = alternatePathString;
+		final Activity a = UnityPlayer.currentActivity;
+		a.runOnUiThread(new Runnable() {public void run() {
+			mWebView.loadUrl(url);
+		}});
+	}
+
+	public void LoadHTML(final String path)
 	{
 		final Activity a = UnityPlayer.currentActivity;
 		a.runOnUiThread(new Runnable() {public void run() {
+			mWebView.loadUrl(path);
+			mWebView.clearCache(true);
+		}});
+	}
 
-			mWebView.loadUrl(url);
-
+	public void LoadHTMLString(final String htmlString)
+	{
+		final Activity a = UnityPlayer.currentActivity;
+		a.runOnUiThread(new Runnable() {public void run() {
+			mWebView.loadDataWithBaseURL( null, htmlString, "text/html", "UTF-8", null );
+			mWebView.clearCache(true);
 		}});
 	}
 
@@ -204,6 +229,19 @@ public class WebViewPlugin
 				mWebView.setVisibility(View.GONE);
 			}
 
+		}});
+	}
+	
+	public void SetTransparent(final boolean visibility)
+	{
+		Activity a = UnityPlayer.currentActivity;
+		a.runOnUiThread(new Runnable() {public void run() {
+
+			if (visibility) {
+				mWebView.setBackgroundColor(0);
+			} else {
+				mWebView.setBackgroundColor(-1);
+			}
 		}});
 	}
 }
