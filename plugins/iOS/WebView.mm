@@ -28,7 +28,6 @@ extern "C" void UnitySendMessage(const char *, const char *, const char *);
 {
 	UIWebView *webView;
     NSString *gameObjectName;
-    NSString *alternatePathString;
 }
 @end
 
@@ -44,7 +43,6 @@ extern "C" void UnitySendMessage(const char *, const char *, const char *);
 	webView.hidden = YES;
 	[view addSubview:webView];
 	gameObjectName = [[NSString stringWithUTF8String:gameObjectName_] retain];
-    alternatePathString = nil;
 
 	return self;
 }
@@ -54,7 +52,6 @@ extern "C" void UnitySendMessage(const char *, const char *, const char *);
 	[webView removeFromSuperview];
 	[webView release];
 	[gameObjectName release];
-    [alternatePathString release];
 	[super dealloc];
 }
 
@@ -71,9 +68,8 @@ extern "C" void UnitySendMessage(const char *, const char *, const char *);
 }
 
 - (void)webView:(UIWebView *)webView didFailLoadWithError:(NSError *)error {
-    NSURL* fileURL = [NSURL fileURLWithPath:alternatePathString];
-    NSURLRequest *request = [NSURLRequest requestWithURL:fileURL];
-    [webView loadRequest:request];
+	UnitySendMessage([gameObjectName UTF8String],
+			"CallFromJS", [@"on_error" UTF8String]);
 }
 
 - (void)setFrame:(NSInteger)x positionY:(NSInteger)y width:(NSInteger)width height:(NSInteger)height
@@ -118,12 +114,10 @@ extern "C" void UnitySendMessage(const char *, const char *, const char *);
     [webView setOpaque:!visibility];
 }
 
-- (void)loadURL:(const char *)url alternate:(const char *)alternatePath
+- (void)loadURL:(const char *)url
 {
 	NSString *urlStr = [NSString stringWithUTF8String:url];
 	NSURL *nsurl = [NSURL URLWithString:urlStr];
-    
-    alternatePathString = [[NSString stringWithUTF8String:alternatePath] retain];
     
 	NSURLRequest *request = [NSURLRequest requestWithURL:nsurl];
 	[webView loadRequest:request];
@@ -136,6 +130,13 @@ extern "C" void UnitySendMessage(const char *, const char *, const char *);
     NSURLRequest *request = [NSURLRequest requestWithURL:fileURL cachePolicy:NSURLRequestReloadIgnoringLocalAndRemoteCacheData timeoutInterval:10.0];
 
     [webView loadRequest:request];
+}
+
+- (void)loadHTMLString:(const char *)htmlChar
+{
+    NSString *htmlString = [NSString stringWithUTF8String:htmlChar];
+    
+    [webView loadHTMLString:htmlString baseURL:nil];
 }
 
 - (void)evaluateJS:(const char *)js
@@ -154,8 +155,9 @@ extern "C" {
 		void *instance, int left, int top, int right, int bottom);
 	void _WebViewPlugin_SetVisibility(void *instance, BOOL visibility);
 	void _WebViewPlugin_SetTransparent(void *instance, BOOL visibility);
-	void _WebViewPlugin_LoadURL(void *instance, const char *url, const char *alternatePathString);
+	void _WebViewPlugin_LoadURL(void *instance, const char *url);
 	void _WebViewPlugin_LoadHTML(void *instance, const char *path);
+	void _WebViewPlugin_LoadHTMLString(void *instance, const char *htmlString);
 	void _WebViewPlugin_EvaluateJS(void *instance, const char *url);
 }
 
@@ -203,16 +205,22 @@ void _WebViewPlugin_SetTransparent(void *instance, BOOL visibility)
     [webViewPlugin setTransparent:visibility];
 }
 
-void _WebViewPlugin_LoadURL(void *instance, const char *url, const char *alternatePathString)
+void _WebViewPlugin_LoadURL(void *instance, const char *url)
 {
 	WebViewPlugin *webViewPlugin = (WebViewPlugin *)instance;
-    [webViewPlugin loadURL:url alternate:alternatePathString];
+    [webViewPlugin loadURL:url];
 }
 
 void _WebViewPlugin_LoadHTML(void *instance, const char *path)
 {
     WebViewPlugin *webViewPlugin = (WebViewPlugin *)instance;
     [webViewPlugin loadHTML:path];
+}
+
+void _WebViewPlugin_LoadHTMLString(void *instance, const char *htmlString)
+{
+    WebViewPlugin *webViewPlugin = (WebViewPlugin *)instance;
+    [webViewPlugin loadHTMLString:htmlString];
 }
 
 void _WebViewPlugin_EvaluateJS(void *instance, const char *js)

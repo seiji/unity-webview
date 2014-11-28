@@ -62,8 +62,6 @@ public class WebViewPlugin
 	private static FrameLayout layout = null;
 	private WebView mWebView;
 	private long mDownTime;
-	private String mAlternatePathString = null;
-	
 	
 	public WebViewPlugin()
 	{
@@ -116,8 +114,8 @@ public class WebViewPlugin
                     }
                     @Override
                     public void onReceivedError(WebView webview, int errorCode, String description, String failingUrl) {
-                    	if (errorCode < 0 && mAlternatePathString != null) {
-                    		webview.loadUrl(mAlternatePathString);
+                    	if (errorCode < 0) {
+                    		UnityPlayer.UnitySendMessage(gameObject, "CallFromJS", "on_error");
                     	}
                     }
             });
@@ -164,9 +162,8 @@ public class WebViewPlugin
 		}});
 	}
 
-	public void LoadURL(final String url, final String alternatePathString)
+	public void LoadURL(final String url)
 	{
-		mAlternatePathString = alternatePathString;
 		final Activity a = UnityPlayer.currentActivity;
 		a.runOnUiThread(new Runnable() {public void run() {
 			mWebView.loadUrl(url);
